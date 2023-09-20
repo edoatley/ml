@@ -7,6 +7,8 @@
     - [Defining the target of our ML prediction](#defining-the-target-of-our-ml-prediction)
     - [Removing old data that is likely to be less relevant](#removing-old-data-that-is-likely-to-be-less-relevant)
     - [Training initial model](#training-initial-model)
+    - [Building a backtesting system](#building-a-backtesting-system)
+    - [Adding additional predictors to our model](#adding-additional-predictors-to-our-model)
 
 
 ## Predict The Stock Market With Machine Learning And Python
@@ -140,4 +142,109 @@ any money :) we would actually be better doing the opposite of what the model sa
 
 This is part of the process though and we can now look at improving the model.
 
-continue from 16m06
+Firstly lets plot the predictions against the actuals:
+
+```python
+combined = pd.concat([test["Target"], predictions], axis=1) # axis=1 treat each input as a column
+compined.plot()
+```
+
+Orange line is the prediction and blue line is what really happened:
+
+![Predictions vs actuals](images/predictions-vs-actuals.png)
+
+We can see we often predict the market will increase and it does not.
+
+### Building a backtesting system
+
+We are going to build a more robust way to test a model. We want to be able to test for many situations not just the last 100 days.
+
+First we create a training function that encapsulates the training of the model:
+
+```python
+def predict(train, test, predictors, target, model):
+    model.fit(train[predictors], train[target])
+    predictions = model.predict(test[predictors])
+    predictions = pd.Series(predictions, index=test.index, name="Predictions")
+    combined = pd.concat([test["Target"], predictions], axis=1)
+    return combined
+```
+
+We can then create a backtesting function:
+
+```python
+def backtest(data, model, predictors, start=2500, step=250):
+  all_predictions = [] # list of dataframes
+  for i in range(start, data.shape[0], step):
+    train = data.iloc[0:i].copy() # all data up to test year
+    test = data.iloc[i:i+step] # data of test year
+    predictions = predict(train, test, predictors, model)
+    all_predictions.append(predictions)
+    return pd.concat(all_predictions)
+```
+
+Start is the number of days to wait before starting the backtest. In our case we have about 10 years given 250 trading days a year. 
+The step is how much we jump by and represents about a year in our case. How it works is we take the first 10 years data and try to predict
+year 11. Then we take the first 11 years data and try to predict year 12 and so on. This is a good way to test the model as it is not using
+specific days. 
+
+With these functions created we can then run the backtest:
+
+```python
+predictions = backtest(sp500, model, predictors)
+```
+
+We can then see how many times we predicted the market went up or down:
+
+```python
+predictions["Predictions"].value_counts()
+# 0 3321
+# 1 2338
+```
+
+we can also calculate the precision:
+  
+```python
+precision_score(predictions["Target"], predictions["Predictions"])
+# 0.53507...
+```
+
+So across all the training days if the market went up we predicted it went up 53.5% of the time
+
+It would be interesting to compare this to the percentage of days it actually went up:
+
+```python
+predictions["Target"].value_counts() / predictions.shape[0]
+# 1 0.536844
+# 0 0.463156
+```
+
+So our model performs slightly worse than if we did just assume it went up as it did that more times!
+
+### Adding additional predictors to our model
+
+Firstly we will define some prediction horizxon variables:
+
+```python
+horizons = [2, 5, 60, 250, 1000]
+
+new_predictors = []
+
+for horizon in horizons:
+  rolling_averages = sp500["Close"].rolling(horizon).mean()
+  ratio_column = f"Close_ratio_{horizon}"
+  sp500[ratio_column] = sp500["Close"] / rolling_averages
+  trend_column = f"Close_trend_{horizon}"
+  sp500[trend_column] = sp500.shift(1).rolling(horizon).sum()
+  new_predictors += [ratio_column, trend_column]
+```
+
+We can consider `horizons` to be similar to a real life analyst thinking about how the stock was 2 days ago, a week  ago, 2-3 months ago, a year ago, 4 years ago
+We calculate the rolling averages over those horizon periods to use to help the model predict the future better. We store these as ratios to the `Close` price
+We can also calculate a Trend which is the rolling sum of the Target (i.e. our 0/1 of our predictions) over that horizon period. This will give us an idea of when
+the market has been rising a lot or falling a lot over that period. 
+
+continue from 27.09m
+
+
+
