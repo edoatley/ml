@@ -9,6 +9,8 @@
     - [Training initial model](#training-initial-model)
     - [Building a backtesting system](#building-a-backtesting-system)
     - [Adding additional predictors to our model](#adding-additional-predictors-to-our-model)
+    - [Improving our model](#improving-our-model)
+    - [Some things to consider to improve](#some-things-to-consider-to-improve)
 
 
 ## Predict The Stock Market With Machine Learning And Python
@@ -27,7 +29,7 @@ sp500=sp500.history(period="max")
 
 Result is a Pandas Dataframe:
 
-![Pandas Dataframe](images/pandas-dataframe.png)
+![Pandas Dataframe](../images/pandas-dataframe.png)
 
 Each row a trading day - non-trading days are omitted
 The columns are:
@@ -56,7 +58,7 @@ The first step is to plot the closing price of the stock:
 sp500.plot(y="Close", use_index=True)
 ```
 
-![Closing price of the stock](images/closing-price.png)
+![Closing price of the stock](../images/closing-price.png)
 
 We can now remove the columns we are ignoring for the moment for simplicity as we are looking at the whole index not individual stocks:
 
@@ -85,7 +87,7 @@ sp500["Target"] = (sp500["Tomorrow"] > sp500["Close"]).astype(int)
 
 Our data frame now looks like this:
 
-![Dataframe with target](images/dataframe-with-target.png)
+![Dataframe with target](../images/dataframe-with-target.png)
 
 
 ### Removing old data that is likely to be less relevant
@@ -151,7 +153,7 @@ compined.plot()
 
 Orange line is the prediction and blue line is what really happened:
 
-![Predictions vs actuals](images/predictions-vs-actuals.png)
+![Predictions vs actuals](../images/predictions-vs-actuals.png)
 
 We can see we often predict the market will increase and it does not.
 
@@ -244,7 +246,69 @@ We calculate the rolling averages over those horizon periods to use to help the 
 We can also calculate a Trend which is the rolling sum of the Target (i.e. our 0/1 of our predictions) over that horizon period. This will give us an idea of when
 the market has been rising a lot or falling a lot over that period. 
 
-continue from 27.09m
+Where there is not enough data to calculate the average or sum we will get NaN (not a number)
+
+These rows will be removed from the data as they could cause skewing of the model:
+
+```python
+sp500 = sp500.dropna() # removes rows with NaN
+```
+
+(note this will lose the first 999 days because of the 1000 day horizon)
+
+### Improving our model
 
 
+We can now define our model and parameters to bennefit from the new predictors:
 
+```python
+model = RandomForestClassifier(n_estimators=200, min_samples_split=50, random_state=42)
+```
+
+We can also now redefine our predict function:
+
+```python
+def predict(train, test, predictors, target, model):
+    model.fit(train[predictors], train[target])
+    predictions = model.predict_proba(test[predictors])[:, 1] # probability of the market going up
+    predictions[predictions > 0.6] = 1 # 60% chance is threshold for market going up
+    predictions[predictions > 0.6] = 0 # 60% chance is threshold for market going down
+    predictions = pd.Series(predictions, index=test.index, name="Predictions")
+    combined = pd.concat([test["Target"], predictions], axis=1)
+    return combined
+```
+
+Rather than a binary 0 or 1 this now returns a probability the stock price will go up / down which helps us be more accurate in our predictions
+We are also setting a 60% threshold so the model needs to be more confident to predict the market will go up or down. 
+The result will be fewer days it is predicted to go up but a higher confidence on those days
+
+We can then run the backtest again:
+
+```python
+predictions = backtest(sp500, model, new_predictors)
+```
+
+Note we are using the ratio and trend only as the predictors as more likely to be helpful than absolute values
+
+Looking at the results we seeL
+
+```python
+predictions["Predictions"].value_counts()
+# 0 3865
+# 1  796
+```
+
+So we can see there are far fewer 'going up' days and if we look at our precision score:
+  
+```python
+precision_score(predictions["Target"], predictions["Predictions"])
+# 0.5737770
+```
+
+So it is better than our previous model and better than the baseline of how many days it really goes up but still not great.
+
+### Some things to consider to improve
+
+- use overnight (US time) markets e.g. Japanese data to predict the next days price
+- Key stocks, key sectors
+- Increase resolution of the data
