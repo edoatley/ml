@@ -393,3 +393,4 @@ What if we could get the right gradient on average for much less computation? By
 
 To simplify the explanation, we focused on gradient descent for a single feature. Rest assured that gradient descent also works on feature sets that contain multiple features.
 
+https://developers.google.com/machine-learning/crash-course/reducing-loss/playground-exercise
