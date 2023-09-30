@@ -21,6 +21,10 @@
     - [Reducing Loss: Learning Rate](#reducing-loss-learning-rate)
       - [Maths aside on Learning Rate](#maths-aside-on-learning-rate)
     - [Reducing Loss: Stochastic Gradient Descent](#reducing-loss-stochastic-gradient-descent)
+  - [First steps with TensorFlow](#first-steps-with-tensorflow)
+    - [First Steps with TensorFlow: Programming Exercises](#first-steps-with-tensorflow-programming-exercises)
+      - [NumPy and pandas](#numpy-and-pandas)
+      - [Linear regression with tf.keras](#linear-regression-with-tfkeras)
 
 
 ## Refs
@@ -393,4 +397,40 @@ What if we could get the right gradient on average for much less computation? By
 
 To simplify the explanation, we focused on gradient descent for a single feature. Rest assured that gradient descent also works on feature sets that contain multiple features.
 
-https://developers.google.com/machine-learning/crash-course/reducing-loss/playground-exercise
+
+## First steps with TensorFlow
+
+TensorFlow is an end-to-end open source platform for machine learning. TensorFlow is a rich system for managing all aspects of a machine learning system; however, this class focuses on using a particular TensorFlow API to develop and train machine learning models. See the [TensorFlow documentation](https://tensorflow.org/) for complete details on the broader TensorFlow system.
+
+TensorFlow APIs are arranged hierarchically, with the high-level APIs built on the low-level APIs. Machine learning researchers use the low-level APIs to create and explore new machine learning algorithms. In this class, you will use a high-level API named tf.keras to define and train machine learning models and to make predictions. tf.keras is the TensorFlow variant of the open-source [Keras](https://keras.io/) API.
+
+The following figure shows the hierarchy of TensorFlow toolkits:
+
+![TensorFlow toolkits](../images/tensorflow-toolkits.png)
+
+### First Steps with TensorFlow: Programming Exercises
+
+As you progress through Machine Learning Crash Course, you'll put machine learning concepts into practice by coding models in tf.keras. You'll use Colab as a programming environment. Colab is Google's version of [Jupyter Notebook](https://jupyter.org/). Like Jupyter Notebook, Colab provides an interactive Python programming environment that combines text, code, graphics, and program output.
+
+#### NumPy and pandas
+
+Using `tf.keras` requires at least a little understanding of the following two open-source Python libraries:
+
+- [NumPy](https://numpy.org/), which simplifies representing arrays and performing linear algebra operations.
+- [pandas](https://pandas.pydata.org/), which provides an easy way to represent datasets in memory.
+
+If you are unfamiliar with NumPy or pandas, please begin by doing the following two Colab exercises:
+
+- [NumPy UltraQuick Tutorial Colab exercise- ](https://colab.research.google.com/github/google/eng-edu/blob/main/ml/cc/exercises/numpy_ultraquick_tutorial.ipynb?utm_source=mlcc&utm_campaign=colab-external&utm_medium=referral&utm_content=numpy_tf2-colab&hl=en), which provides all the NumPy information you need for this course.
+- [pandas UltraQuick Tutorial Colab exercise](https://colab.research.google.com/github/google/eng-edu/blob/main/ml/cc/exercises/pandas_dataframe_ultraquick_tutorial.ipynb?utm_source=mlcc&utm_campaign=colab-external&utm_medium=referral&utm_content=pandas_tf2-colab&hl=en), which provides all the pandas information you need for this course.
+
+[Notes on NumPy](./NumPy-Quick-Tutorial.MD)
+
+[Notes on Pandas](./Pandas-Quick-Tutorial.MD)
+
+#### Linear regression with tf.keras
+
+After gaining competency in NumPy and pandas, do the following two Colab exercises to explore linear regression and hyperparameter tuning in tf.keras:
+
+- [Linear Regression with Synthetic Data Colab exercise](https://colab.research.google.com/github/google/eng-edu/blob/main/ml/cc/exercises/linear_regression_with_synthetic_data.ipynb?utm_source=mlcc&utm_campaign=colab-external&utm_medium=referral&utm_content=linear_regression_synthetic_tf2-colab&hl=en), which explores linear regression with a toy dataset. See notes [here](./Linear-Regression-With-Synthetic-Data.MD)
+- [Linear Regression with a Real Dataset Colab exercise](https://colab.research.google.com/github/google/eng-edu/blob/main/ml/cc/exercises/linear_regression_with_a_real_dataset.ipynb?utm_source=mlcc&utm_campaign=colab-external&utm_medium=referral&utm_content=linear_regression_real_tf2-colab&hl=en), which guides you through the kinds of analysis you should do on a real dataset. See notes [here](./Linear-Regression-With-Real-Data.MD)
