@@ -469,3 +469,4 @@ Correlation matrices don't tell the entire story. In later exercises, you'll fin
 we'll explore ethical and fairness issues.
 
 So in summary I lucked out with my feature choice earlier and median_income does seem to be a good indicator of these features
+

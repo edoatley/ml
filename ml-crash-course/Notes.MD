@@ -50,6 +50,13 @@
       - [Binning](#binning)
       - [Scrubbing](#scrubbing)
       - [Know your data](#know-your-data)
+  - [Feature Crosses](#feature-crosses)
+    - [Feature Crosses: Encoding Nonlinearity](#feature-crosses-encoding-nonlinearity)
+      - [Kinds of feature crosses](#kinds-of-feature-crosses)
+    - [Feature Crosses: Crossing One-Hot Vectors](#feature-crosses-crossing-one-hot-vectors)
+    - [Feature Crosses: Programming Exercise](#feature-crosses-programming-exercise)
+  - [Regularization for Simplicity](#regularization-for-simplicity)
+    - [L2 Regularization](#l2-regularization)
 
 
 ## Refs
@@ -838,3 +845,172 @@ Follow these rules:
 - Double-check that the training data agrees with other sources (for example, dashboards).
 
 Treat your data with all the care that you would treat any mission-critical code. Good ML relies on good data.
+
+## Feature Crosses
+
+### Feature Crosses: Encoding Nonlinearity
+
+In Figures 1 and 2, imagine the following:
+
+- The blue dots represent sick trees.
+- The orange dots represent healthy trees.
+
+![Linear Problem](../images/linear-problem.png)
+
+**Figure 1. Is this a linear problem?**
+
+Can you draw a line that neatly separates the sick trees from the healthy trees? Sure. This is a linear problem. The line won't be perfect. A sick tree or two might be on the "healthy" side, but your line will be a good predictor.
+
+Now look at the following figure:
+
+![Non-Linear Problem](../images/non-linear-problem.png)
+
+**Figure 2. Is this a linear problem?**
+
+Can you draw a single straight line that neatly separates the sick trees from the healthy trees? No, you can't. This is a nonlinear problem. Any line you draw will be a poor predictor of tree health.
+
+![Non-Linear Problem](../images/non-linear-problem-wl.png)
+
+**Figure 3. A single line can't separate the two classes.**
+
+To solve the nonlinear problem shown in Figure 2, create a feature cross. A **feature cross** is a synthetic feature that encodes nonlinearity in the feature space by multiplying two or more input features together. (The term cross comes from [cross product](https://wikipedia.org/wiki/Cross_product).) Let's create a feature cross named $x_3$ by crossing $x_1$ and $x_2$:
+
+$$x_3 = x_1x_2$$
+
+We treat this newly minted feature cross just like any other feature. The linear formula becomes:
+
+A linear algorithm can learn a weight for $w_3$ just as it would for $w_1$  and $w_2$. In other words, although 
+ encodes nonlinear information, you don’t need to change how the linear model trains to determine the value of $w_3$.
+
+#### Kinds of feature crosses
+
+We can create many different kinds of feature crosses. For example:
+
+- `[A X B]`: a feature cross formed by multiplying the values of two features.
+- `[A x B x C x D x E]`: a feature cross formed by multiplying the values of five features.
+- `[A x A]`: a feature cross formed by squaring a single feature.
+
+Thanks to [Stochastic Gradient Descent](#reducing-loss-stochastic-gradient-descent), linear models can be trained efficiently. Consequently, supplementing scaled linear models with feature crosses has traditionally been an efficient way to train on massive-scale data sets.
+
+### Feature Crosses: Crossing One-Hot Vectors
+
+So far, we've focused on feature-crossing two individual floating-point features. In practice, machine learning models seldom cross continuous features. However, machine learning models do frequently cross one-hot feature vectors. Think of feature crosses of one-hot feature vectors as logical conjunctions. For example, suppose we have two features: country and language. A one-hot encoding of each generates vectors with binary features that can be interpreted as `country=USA`, `country=France` or `language=English`, `language=Spanish`. Then, if you do a feature cross of these one-hot encodings, you get binary features that can be interpreted as logical conjunctions, such as:
+
+```
+  country:usa AND language:spanish
+```
+
+As another example, suppose you bin latitude and longitude, producing separate one-hot five-element feature vectors. For instance, a given latitude and longitude could be represented as follows:
+
+```
+  binned_latitude = [0, 0, 0, 1, 0]
+  binned_longitude = [0, 1, 0, 0, 0]
+```
+
+Suppose you create a feature cross of these two feature vectors:
+
+```
+  binned_latitude X binned_longitude
+```
+
+This feature cross is a 25-element one-hot vector (24 zeroes and 1 one). The single 1 in the cross identifies a particular conjunction of latitude and longitude. Your model can then learn particular associations about that conjunction.
+
+Suppose we bin latitude and longitude much more coarsely, as follows:
+
+```
+binned_latitude(lat) = [
+  0  < lat <= 10
+  10 < lat <= 20
+  20 < lat <= 30
+]
+
+binned_longitude(lon) = [
+  0  < lon <= 15
+  15 < lon <= 30
+]
+```
+
+Creating a feature cross of those coarse bins leads to synthetic feature having the following meanings:
+
+```
+binned_latitude_X_longitude(lat, lon) = [
+  0  < lat <= 10 AND 0  < lon <= 15
+  0  < lat <= 10 AND 15 < lon <= 30
+  10 < lat <= 20 AND 0  < lon <= 15
+  10 < lat <= 20 AND 15 < lon <= 30
+  20 < lat <= 30 AND 0  < lon <= 15
+  20 < lat <= 30 AND 15 < lon <= 30
+]
+```
+
+Now suppose our model needs to predict how satisfied dog owners will be with dogs based on two features:
+
+
+Behavior type (barking, crying, snuggling, etc.)
+Time of day
+If we build a feature cross from both these features:
+
+```
+  [behavior type X time of day]
+```
+
+then we'll end up with vastly more predictive ability than either feature on its own. For example, if a dog cries (happily) at 5:00 pm when the owner returns from work will likely be a great positive predictor of owner satisfaction. Crying (miserably, perhaps) at 3:00 am when the owner was sleeping soundly will likely be a strong negative predictor of owner satisfaction.
+
+Linear learners scale well to massive data. Using feature crosses on massive data sets is one efficient strategy for learning highly complex models. [Neural networks](https://developers.google.com/machine-learning/crash-course/introduction-to-neural-networks) provide another strategy.
+
+### Feature Crosses: Programming Exercise
+
+See [Representation-with-Feature-Crosses.MD](./Representation-with-Feature-Crosses.MD)
+
+## Regularization for Simplicity
+
+Regularization means penalizing the complexity of a model to reduce overfitting.
+
+### L2 Regularization
+
+Consider the following generalization curve, which shows the loss for both the training set and validation set against the number of training iterations.
+
+![Overfitting Curve](../images/overfitting-curve.png)
+
+**Figure 1. Loss on training set and validation set.**
+
+Figure 1 shows a model in which training loss gradually decreases, but validation loss eventually goes up. In other words, this generalization curve shows that the model is [overfitting](https://developers.google.com/machine-learning/crash-course/generalization/peril-of-overfitting) to the data in the training set. Channeling our inner Ockham, perhaps we could prevent overfitting by penalizing complex models, a principle called **regularization**.
+
+In other words, instead of simply aiming to minimize loss (empirical risk minimization):
+
+$\text{minimize(Loss(Data|Model))}$
+
+we'll now minimize loss+complexity, which is called structural risk minimization:
+
+$\text{minimize(Loss(Data|Model) + complexity(Model))}$
+
+Our training optimization algorithm is now a function of two terms: the **loss term**, which measures how well the model fits the data, and the **regularization term**, which measures model complexity.
+
+Machine Learning Crash Course focuses on two common (and somewhat related) ways to think of model complexity:
+
+- Model complexity as a **function of the weights of all the features in the model**.
+- Model complexity as a **function of the total number of features with nonzero weights**. (A later module covers this approach.)
+
+If model complexity is a function of weights, a feature weight with a high absolute value is more complex than a feature weight with a low absolute value.
+
+We can quantify complexity using the **$L_2$ regularization** formula, which defines the regularization term as the sum of the squares of all the feature weights:
+
+$L_2\text{ regularization term} = ||\boldsymbol w||_2^2 = {w_1^2 + w_2^2 + ... + w_n^2}$
+
+In this formula, weights close to zero have little effect on model complexity, while outlier weights can have a huge impact.
+
+For example, a linear model with the following weights:
+
+$\{w_1 = 0.2, w_2 = 0.5, w_3 = 5, w_4 = 1, w_5 = 0.25, w_6 = 0.75\}$
+
+Has an L2 regularization term of 26.915:
+
+$w_1^2 + w_2^2 + \boldsymbol{w_3^2} + w_4^2 + w_5^2 + w_6^2$
+
+$= 0.2^2 + 0.5^2 + \boldsymbol{5^2} + 1^2 + 0.25^2 + 0.75^2$
+
+$= 0.04 + 0.25 + \boldsymbol{25} + 1 + 0.0625 + 0.5625$
+
+$= 26.915$
+
+But $w_3$ (bolded above), with a squared value of 25, contributes nearly all the complexity. The sum of the squares of all five other weights adds just 1.915 to the $L_2$ regularization term.
