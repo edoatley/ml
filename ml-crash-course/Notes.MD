@@ -57,6 +57,21 @@
     - [Feature Crosses: Programming Exercise](#feature-crosses-programming-exercise)
   - [Regularization for Simplicity](#regularization-for-simplicity)
     - [L2 Regularization](#l2-regularization)
+    - [Regularization for Simplicity: Lambda](#regularization-for-simplicity-lambda)
+      - [$L\_2$ Regularization and learning rate](#l_2-regularization-and-learning-rate)
+    - [$L\_2$ Regularization Knowledge Check](#l_2-regularization-knowledge-check)
+  - [Logistic Regression](#logistic-regression)
+    - [Logistic Regression: Calculating a Probability](#logistic-regression-calculating-a-probability)
+    - [Logistic Regression: Loss and Regularization](#logistic-regression-loss-and-regularization)
+      - [Loss function for Logistic Regression](#loss-function-for-logistic-regression)
+      - [Regularization in Logistic Regression](#regularization-in-logistic-regression)
+  - [Classification](#classification)
+    - [Classification: Thresholding](#classification-thresholding)
+    - [Classification: True vs. False and Positive vs. Negative](#classification-true-vs-false-and-positive-vs-negative)
+    - [Classification: Accuracy](#classification-accuracy)
+    - [Classification: Precision and Recall](#classification-precision-and-recall)
+      - [Recall](#recall)
+      - [Precision and Recall: A Tug of War](#precision-and-recall-a-tug-of-war)
 
 
 ## Refs
@@ -1014,3 +1029,300 @@ $= 0.04 + 0.25 + \boldsymbol{25} + 1 + 0.0625 + 0.5625$
 $= 26.915$
 
 But $w_3$ (bolded above), with a squared value of 25, contributes nearly all the complexity. The sum of the squares of all five other weights adds just 1.915 to the $L_2$ regularization term.
+
+### Regularization for Simplicity: Lambda
+
+Model developers tune the overall impact of the regularization term by multiplying its value by a scalar known as **lambda** (also called the regularization rate). That is, model developers aim to do the following:
+
+$\text{minimize(Loss(Data|Model)} + \lambda \text{ complexity(Model))}$ 
+
+Performing $L_2$ regularization has the following effect on a model
+
+- Encourages weight values toward 0 (but not exactly 0)
+- Encourages the mean of the weights toward 0, with a normal (bell-shaped or Gaussian) distribution.
+Increasing the lambda value strengthens the regularization effect. For example, the histogram of weights for a high value of lambda might look as shown in Figure 2.
+
+![Histogram of a model's weights with a mean of zero and a normal distribution](../images/mean-of-zero-and-normal-dist.png)
+
+**Figure 2. Histogram of weights.**
+
+Lowering the value of lambda tends to yield a flatter histogram, as shown in Figure 3.
+
+![Histogram of a model's weights with a mean of zero that is somewhere between a flat distribution and a normal distribution.](../images/mean-of-zero-and-flat-normal-dist.png)
+
+**Figure 3. Histogram of weights produced by a lower lambda value.**
+
+When choosing a lambda value, the goal is to strike the right balance between simplicity and training-data fit:
+
+- If your lambda value is too high, your model will be simple, but you run the risk of underfitting your data. Your model won't learn enough about the training data to make useful predictions.
+
+- If your lambda value is too low, your model will be more complex, and you run the risk of overfitting your data. Your model will learn too much about the particularities of the training data, and won't be able to generalize to new data.
+
+> Note: Setting lambda to zero removes regularization completely. In this case, training focuses exclusively > on minimizing loss, which poses the highest possible overfitting risk.
+
+The ideal value of lambda produces a model that generalizes well to new, previously unseen data. Unfortunately, that ideal value of lambda is data-dependent, so you'll need to do some tuning.
+ 
+#### $L_2$ Regularization and learning rate 
+
+> There's a close connection between learning rate and lambda. Strong $L_2$ regularization values tend to drive feature weights closer to 0. Lower learning rates (with early stopping) often produce the same effect because the steps away from 0 aren't as large. Consequently, tweaking learning rate and lambda simultaneously may have confounding effects.
+> 
+> Early stopping means ending training before the model fully reaches convergence. In practice, we often end up with some amount of implicit early stopping when training in an online (continuous) fashion. That is, some new trends just haven't had enough data yet to converge.
+> 
+> As noted, the effects from changes to regularization parameters can be confounded with the effects from changes in learning rate or number of iterations. One useful practice (when training across a fixed batch of data) is to give yourself a high enough number of iterations that early stopping doesn't play into things.
+
+### $L_2$ Regularization Knowledge Check
+
+![L2 Regularization Knowledge Check](../images/l2-regularization-knowledge-check.png)
+
+## Logistic Regression
+
+### Logistic Regression: Calculating a Probability
+
+Many problems require a probability estimate as output. Logistic regression is an extremely efficient mechanism for calculating probabilities. Practically speaking, you can use the returned probability in either of the following two ways:
+
+- "As is"
+- Converted to a binary category.
+
+Let's consider how we might use the probability "as is." Suppose we create a logistic regression model to predict the probability that a dog will bark during the middle of the night. We'll call that probability:
+
+$p(bark | night)$
+
+If the logistic regression model predicts $p(bark | night) = 0.05$, then over a year, the dog's owners should be startled awake approximately 18 times:
+
+$$
+\begin{align}
+startled &= p(bark | night) \cdot nights \\
+         &= 0.05 \cdot 365 \\
+         &~= 18
+\end{align}
+$$
+
+In many cases, you'll map the logistic regression output into the solution to a binary classification problem, in which the goal is to correctly predict one of two possible labels (e.g., "spam" or "not spam"). A later module focuses on that.
+
+You might be wondering how a logistic regression model can ensure output that always falls between 0 and 1. As it happens, a **sigmoid function**, defined as follows, produces output having those same characteristics:
+
+$y = \frac{1}{1 + e^{-z}}$
+
+The sigmoid function yields the following plot:
+
+![Sigmoid function. The x axis is the raw inference value. The y axis extends from 0 to +1, exclusive.](../images/sigmoid-function.png)
+
+**Figure 1: Sigmoid function.**
+
+
+If $z$ represents the output of the linear layer of a model trained with logistic regression, then $sigmoid(z)$  will yield a value (a probability) between 0 and 1. In mathematical terms:
+
+$y' = \frac{1}{1 + e^{-z}}$
+
+where:
+
+ - $y'$ is the output of the logistic regression model for a particular example.
+ - $z = b + w_1x_1 + w_2x_2 + \ldots + w_Nx_N$
+   - The $w$ values are the model's learned weights, and $b$ is the bias.
+   - The $x$ values are the feature values for a particular example.
+
+Note that $z$  is also referred to as the log-odds because the inverse of the sigmoid states that $z$ can be defined as the log of the probability of the $1$ label (e.g., "dog barks") divided by the probability of the $0$ label (e.g., "dog doesn't bark"):
+
+$z = \log\left(\frac{y}{1-y}\right)$
+
+Here is the sigmoid function with ML labels:
+
+![Logistic Regression](../images/Logistic-Regression.png)
+
+**Figure 2: Logistic regression output.**
+
+### Logistic Regression: Loss and Regularization
+
+#### Loss function for Logistic Regression
+
+The loss function for linear regression is squared loss. The loss function for logistic regression is Log Loss, which is defined as follows:
+
+$\text{Log Loss} = \sum_{(x,y)\in D} -y\log(y') - (1 - y)\log(1 - y')$
+
+where:
+
+- $(x,y)\in D$ is the data set containing many labeled examples, which are $(x,y)$
+ pairs.
+- $y$ is the label in a labeled example. Since this is logistic regression, every value of $y$ must either be 0 or 1.
+- $y'$ is the predicted value (somewhere between 0 and 1), given the set of features in $x$.
+
+#### Regularization in Logistic Regression
+
+Regularization is extremely important in logistic regression modeling. Without regularization, the asymptotic nature of logistic regression would keep driving loss towards 0 in high dimensions. Consequently, most logistic regression models use one of the following two strategies to dampen model complexity:
+
+- $L_2$ regularization.
+- Early stopping, that is, limiting the number of training steps or the learning rate.
+
+(We'll discuss a third strategy — $L_1$ regularization—in a later module.)
+
+Imagine that you assign a unique id to each example, and map each id to its own feature. If you don't specify a regularization function, the model will become completely overfit. That's because the model would try to drive loss to zero on all examples and never get there, driving the weights for each indicator feature to +infinity or -infinity. This can happen in high dimensional data with feature crosses, when there’s a huge mass of rare crosses that happen only on one example each.
+
+Fortunately, using $L_2$ or early stopping will prevent this problem.
+
+## Classification
+
+This module shows how logistic regression can be used for classification tasks, and explores how to evaluate the effectiveness of classification models.
+
+### Classification: Thresholding
+
+Logistic regression returns a probability. You can use the returned probability "as is" (for example, the probability that the user will click on this ad is 0.00023) or convert the returned probability to a binary value (for example, this email is spam).
+
+A logistic regression model that returns 0.9995 for a particular email message is predicting that it is very likely to be spam. Conversely, another email message with a prediction score of 0.0003 on that same logistic regression model is very likely not spam. However, what about an email message with a prediction score of 0.6? In order to map a logistic regression value to a binary category, you must define a **classification threshold** (also called the **decision threshold**). A value above that threshold indicates "spam"; a value below indicates "not spam." It is tempting to assume that the classification threshold should always be 0.5, but thresholds are problem-dependent, and are therefore values that you must tune.
+
+The following sections take a closer look at metrics you can use to evaluate a classification model's predictions, as well as the impact of changing the classification threshold on these predictions.
+
+> **Note**: "Tuning" a threshold for logistic regression is different from tuning hyperparameters such as learning rate. Part of choosing a threshold is assessing how much you'll suffer for making a mistake. For example, mistakenly labeling a non-spam message as spam is very bad. However, mistakenly labeling a spam message as non-spam is unpleasant, but hardly the end of your job.
+
+### Classification: True vs. False and Positive vs. Negative
+
+In this section, we'll define the primary building blocks of the metrics we'll use to evaluate classification models. But first, a fable:
+
+> **An Aesop's Fable: The Boy Who Cried Wolf (compressed)**
+> 
+> A shepherd boy gets bored tending the town's flock. To have some fun, he cries out, "Wolf!" even though no wolf is in sight. The villagers run to protect the flock, but then get really mad when they realize the boy was playing a joke on them.
+>
+> [Iterate previous paragraph N times.]
+>
+> One night, the shepherd boy sees a real wolf approaching the flock and calls out, "Wolf!" The villagers refuse to be fooled again and stay in their houses. The hungry wolf turns the flock into lamb chops. The town goes hungry. Panic ensues.
+
+Let's make the following definitions:
+
+- "Wolf" is a **positive** class.
+- "No wolf" is a **negative** class.
+
+We can summarize our "wolf-prediction" model using a 2x2 [confusion matrix](https://developers.google.com/machine-learning/glossary#confusion_matrix) that depicts all four possible outcomes:
+
+![Confusion Matrix](../images/boy-cried-wolf-confusion-matrix.png)
+
+A **true positive** is an outcome where the model correctly predicts the positive class. Similarly, a **true negative** is an outcome where the model correctly predicts the negative class.
+
+A **false positive** is an outcome where the model incorrectly predicts the positive class. And a **false negative** is an outcome where the model incorrectly predicts the negative class.
+
+In the following sections, we'll look at how to evaluate classification models using metrics derived from these four outcomes.
+
+### Classification: Accuracy
+
+Accuracy is one metric for evaluating classification models. Informally, accuracy is the fraction of predictions our model got right. Formally, accuracy has the following definition:
+
+$\text{Accuracy} = \frac{\text{Number of correct predictions}}{\text{Total number of predictions}}$
+
+For binary classification, accuracy can also be calculated in terms of positives and negatives as follows:
+
+$\text{Accuracy} = \frac{TP+TN}{TP+TN+FP+FN}$
+
+Where $TP$ = True Positives, $TN$ = True Negatives, $FP$ = False Positives, and $FN$ = False Negatives.
+
+Let's try calculating accuracy for the following model that classified 100 tumors as malignant (the positive class) or benign (the negative class):
+
+![Confusion Matrix](../images/tumor-confusion-matrix.png)
+
+$\text{Accuracy} = \frac{TP+TN}{TP+TN+FP+FN} = \frac{1+90}{1+90+1+8} = 0.91$
+
+Accuracy comes out to 0.91, or 91% (91 correct predictions out of 100 total examples). That means our tumor classifier is doing a great job of identifying malignancies, right?
+
+Actually, let's do a closer analysis of positives and negatives to gain more insight into our model's performance.
+
+Of the 100 tumor examples, 91 are benign (90 TNs and 1 FP) and 9 are malignant (1 TP and 8 FNs).
+
+Of the 91 benign tumors, the model correctly identifies 90 as benign. That's good. However, of the 9 malignant tumors, the model only correctly identifies 1 as malignant — a terrible outcome, as 8 out of 9 malignancies go undiagnosed!
+
+While 91% accuracy may seem good at first glance, another tumor-classifier model that always predicts benign would achieve the exact same accuracy (91/100 correct predictions) on our examples. In other words, our model is no better than one that has zero predictive ability to distinguish malignant tumors from benign tumors.
+
+Accuracy alone doesn't tell the full story when you're working with a class-imbalanced data set, like this one, where there is a significant disparity between the number of positive and negative labels.
+
+In the next section, we'll look at two better metrics for evaluating class-imbalanced problems: precision and recall.
+
+### Classification: Precision and Recall
+
+#### Precision
+
+Precision attempts to answer the following question:
+
+> What proportion of positive identifications was actually correct?
+
+Precision is defined as follows:
+
+$\text{Precision} = \frac{TP}{TP+FP}$
+
+> Note: A model that produces no false positives has a precision of 1.0.
+
+Let's calculate precision for our ML model from the previous section that analyzes tumors:
+
+![Alt text](../images/tumor-precision.png)
+
+$\text{Precision} = \frac{TP}{TP+FP} = \frac{1}{1+1} = 0.5$
+
+Our model has a precision of 0.5 — in other words, when it predicts a tumor is malignant, it is correct 50% of the time.
+
+#### Recall
+
+Recall attempts to answer the following question:
+
+> What proportion of actual positives was identified correctly?
+
+Mathematically, recall is defined as follows:
+
+$\text{Recall} = \frac{TP}{TP+FN}$
+
+> Note: A model that produces no false negatives has a recall of 1.0.
+
+Let's calculate recall for our tumor classifier:
+
+![Alt text](../images/tumor-recall.png)
+
+Our model has a recall of 0.11—in other words, it correctly identifies 11% of all malignant tumors.
+
+#### Precision and Recall: A Tug of War
+
+To fully evaluate the effectiveness of a model, you must examine both precision and recall. Unfortunately, precision and recall are often in tension. That is, improving precision typically reduces recall and vice versa. Explore this notion by looking at the following figure, which shows 30 predictions made by an email classification model. Those to the right of the classification threshold are classified as "spam", while those to the left are classified as "not spam."
+
+![Classifying email messages](../images/classifying-spam-not-spam.png)
+
+**Figure 1. Classifying email messages as spam or not spam.**
+
+Let's calculate precision and recall based on the results shown in Figure 1:
+
+![Alt text](../images/spam-confusion-matrix.png)
+
+Precision measures the percentage of emails flagged as spam that were correctly classified—that is, the percentage of dots to the right of the threshold line that are green in Figure 1:
+
+$\text{Precision} = \frac{TP}{TP + FP} = \frac{8}{8+2} = 0.8$
+
+Recall measures the percentage of actual spam emails that were correctly classified—that is, the percentage of green dots that are to the right of the threshold line in Figure 1:
+
+$\text{Recall} = \frac{TP}{TP + FN} = \frac{8}{8 + 3} = 0.73$
+
+Figure 2 illustrates the effect of increasing the classification threshold.
+
+![Increasing Classification Threshold](../images/spam-classification-threshold.png)
+
+**Figure 2. Increasing classification threshold.**
+
+The number of false positives decreases, but false negatives increase. As a result, precision increases, while recall decreases:
+
+![Alt text](../images/spam-confusion-matrix-higher-threshold.png)
+
+$\text{Precision} = \frac{TP}{TP + FP} = \frac{7}{7+1} = 0.88$
+
+$\text{Recall} = \frac{TP}{TP + FN} = \frac{7}{7 + 4} = 0.64$
+
+Conversely, Figure 3 illustrates the effect of decreasing the classification threshold (from its original position in Figure 1).
+
+![Decreasing Classification Threshold](../images/spam-classification-threshold-lower.png)
+
+**Figure 3. Decreasing classification threshold.**
+
+False positives increase, and false negatives decrease. As a result, this time, precision decreases and recall increases:
+
+![Alt text](../images/spam-confusion-matrix-lower-threshold.png)
+
+$\text{Precision} = \frac{TP}{TP + FP} = \frac{9}{9+3} = 0.75$
+
+$\text{Recall} = \frac{TP}{TP + FN} = \frac{9}{9 + 2} = 0.82$
+
+Various metrics have been developed that rely on both precision and recall. For example, see F1 score.
+
+![Accuracy Knowledge Check](../images/accuracy-knowledge-check.png)
+![Precision Knowledge Check](../images/precision-knowledge-check.png)
+![Recall Knowledge Check](../images/recall-knowledge-check.png)
+![Recall & Precision Knowledge Check](../images/recall-precision-knowledge-check.png)
