@@ -72,6 +72,22 @@
     - [Classification: Precision and Recall](#classification-precision-and-recall)
       - [Recall](#recall)
       - [Precision and Recall: A Tug of War](#precision-and-recall-a-tug-of-war)
+    - [Classification: ROC Curve and AUC](#classification-roc-curve-and-auc)
+      - [ROC (receiver operating characteristic) curve](#roc-receiver-operating-characteristic-curve)
+      - [AUC: Area Under the ROC Curve](#auc-area-under-the-roc-curve)
+    - [Classification: Prediction Bias](#classification-prediction-bias)
+      - [Bucketing and Prediction Bias](#bucketing-and-prediction-bias)
+    - [Binary Classification: Programming Exercise](#binary-classification-programming-exercise)
+  - [Regularization for Sparsity](#regularization-for-sparsity)
+    - [Regularization for Sparsity: L₁ Regularization](#regularization-for-sparsity-l-regularization)
+      - [$L\_1$ vs. $L\_2$ regularization.](#l_1-vs-l_2-regularization)
+  - [Neural Networks](#neural-networks)
+    - [Neural Networks: Structure](#neural-networks-structure)
+      - [Hidden Layers](#hidden-layers)
+      - [Activation Functions](#activation-functions)
+      - [Common Activation Functions](#common-activation-functions)
+      - [Summary](#summary)
+    - [Neural Networks: Programming Exercise](#neural-networks-programming-exercise)
 
 
 ## Refs
@@ -1326,3 +1342,269 @@ Various metrics have been developed that rely on both precision and recall. For 
 ![Precision Knowledge Check](../images/precision-knowledge-check.png)
 ![Recall Knowledge Check](../images/recall-knowledge-check.png)
 ![Recall & Precision Knowledge Check](../images/recall-precision-knowledge-check.png)
+
+### Classification: ROC Curve and AUC
+
+#### ROC (receiver operating characteristic) curve
+
+An ROC curve (receiver operating characteristic curve) is a graph showing the performance of a classification model at all classification thresholds. This curve plots two parameters:
+
+- True Positive Rate
+- False Positive Rate
+
+True Positive Rate (TPR) is a synonym for recall and is therefore defined as follows:
+
+$TPR = \frac{TP} {TP + FN}$
+
+False Positive Rate (FPR) is defined as follows:
+
+$FPR = \frac{FP} {FP + TN}$
+
+An ROC curve plots TPR vs. FPR at different classification thresholds. Lowering the classification threshold classifies more items as positive, thus increasing both False Positives and True Positives. The following figure shows a typical ROC curve.
+
+![ROC Curve showing TP Rate vs. FP Rate at different classification thresholds.](../images/roc-curve-example.png)
+
+**Figure 4. TP vs. FP rate at different classification thresholds.**
+
+To compute the points in an ROC curve, we could evaluate a logistic regression model many times with different classification thresholds, but this would be inefficient. Fortunately, there's an efficient, sorting-based algorithm that can provide this information for us, called AUC.
+
+#### AUC: Area Under the ROC Curve
+
+AUC stands for "Area under the ROC Curve." That is, AUC measures the entire two-dimensional area underneath the entire ROC curve (think integral calculus) from (0,0) to (1,1).
+
+![AUC (Area under the ROC Curve).](../images/auc.png)
+
+**Figure 5. AUC (Area under the ROC Curve).**
+
+AUC provides an aggregate measure of performance across all possible classification thresholds. One way of interpreting AUC is as the probability that the model ranks a random positive example more highly than a random negative example. For example, given the following examples, which are arranged from left to right in ascending order of logistic regression predictions:
+
+![Positive and negative examples ranked in ascending order of logistic regression score](../images/ranked-predictions-logistic-regression-score.png)
+
+**Figure 6. Predictions ranked in ascending order of logistic regression score.**
+
+AUC represents the probability that a random positive (green) example is positioned to the right of a random negative (red) example.
+
+AUC ranges in value from 0 to 1. A model whose predictions are 100% wrong has an AUC of 0.0; one whose predictions are 100% correct has an AUC of 1.0.
+
+AUC is desirable for the following two reasons:
+
+- AUC is **scale-invariant**. It measures how well predictions are ranked, rather than their absolute values.
+- AUC is **classification-threshold-invariant**. It measures the quality of the model's predictions irrespective of what classification threshold is chosen.
+
+
+However, both these reasons come with caveats, which may limit the usefulness of AUC in certain use cases:
+
+- **Scale invariance is not always desirable**. For example, sometimes we really do need well calibrated probability outputs, and AUC won’t tell us about that.
+- **Classification-threshold invariance is not always desirable**. In cases where there are wide disparities in the cost of false negatives vs. false positives, it may be critical to minimize one type of classification error. For example, when doing email spam detection, you likely want to prioritize minimizing false positives (even if that results in a significant increase of false negatives). AUC isn't a useful metric for this type of optimization.
+
+### Classification: Prediction Bias
+
+Logistic regression predictions should be unbiased. That is:
+
+> "average of predictions" should ≈ "average of observations"
+
+**Prediction bias** is a quantity that measures how far apart those two averages are. That is:
+
+$\text{prediction bias} = \text{average of predictions} - \text{average of labels in data set}$
+
+> Note: "Prediction bias" is a different quantity than bias (the b in wx + b).
+
+A significant nonzero prediction bias tells you there is a bug somewhere in your model, as it indicates that the model is wrong about how frequently positive labels occur.
+
+For example, let's say we know that on average, 1% of all emails are spam. If we don't know anything at all about a given email, we should predict that it's 1% likely to be spam. Similarly, a good spam model should predict on average that emails are 1% likely to be spam. (In other words, if we average the predicted likelihoods of each individual email being spam, the result should be 1%.) If instead, the model's average prediction is 20% likelihood of being spam, we can conclude that it exhibits prediction bias.
+
+Possible root causes of prediction bias are:
+
+- Incomplete feature set
+- Noisy data set
+- Buggy pipeline
+- Biased training sample
+- Overly strong regularization
+
+You might be tempted to correct prediction bias by post-processing the learned model—that is, by adding a calibration layer that adjusts your model's output to reduce the prediction bias. For example, if your model has +3% bias, you could add a calibration layer that lowers the mean prediction by 3%. However, adding a calibration layer is a bad idea for the following reasons:
+
+- You're fixing the symptom rather than the cause.
+- You've built a more brittle system that you must now keep up to date.
+
+If possible, avoid calibration layers. Projects that use calibration layers tend to become reliant on them—using calibration layers to fix all their model's sins. Ultimately, maintaining the calibration layers can become a nightmare.
+
+> Note: A good model will usually have near-zero bias. That said, a low prediction bias does not prove that your model is good. A really terrible model could have a zero prediction bias. For example, a model that just predicts the mean value for all examples would be a bad model, despite having zero bias.
+
+#### Bucketing and Prediction Bias
+
+Logistic regression predicts a value between 0 and 1. However, all labeled examples are either exactly 0 (meaning, for example, "not spam") or exactly 1 (meaning, for example, "spam"). Therefore, when examining prediction bias, you cannot accurately determine the prediction bias based on only one example; you must examine the prediction bias on a "bucket" of examples. That is, prediction bias for logistic regression only makes sense when grouping enough examples together to be able to compare a predicted value (for example, 0.392) to observed values (for example, 0.394).
+
+You can form buckets in the following ways:
+
+- Linearly breaking up the target predictions.
+- Forming quantiles.
+
+Consider the following calibration plot from a particular model. Each dot represents a bucket of 1,000 values. The axes have the following meanings:
+
+- The x-axis represents the average of values the model predicted for that bucket.
+- The y-axis represents the actual average of values in the data set for that bucket.
+Both axes are logarithmic scales.
+
+![Prediction bias curve](../images/prediction-bias-curve.png)
+
+**Figure 8. Prediction bias curve (logarithmic scales)**
+
+Why are the predictions so poor for only part of the model? Here are a few possibilities:
+
+- The training set doesn't adequately represent certain subsets of the data space.
+- Some subsets of the data set are noisier than others.
+- The model is overly regularized. (Consider reducing the value of lambda.)
+
+### Binary Classification: Programming Exercise
+
+See [Binary-Classification.MD](Binary-Classification.MD)
+
+## Regularization for Sparsity
+
+### Regularization for Sparsity: L₁ Regularization
+
+Sparse vectors often contain many dimensions. Creating a feature cross results in even more dimensions. Given such high-dimensional feature vectors, model size may become huge and require huge amounts of RAM.
+
+In a high-dimensional sparse vector, it would be nice to encourage weights to drop to exactly 0 where possible. A weight of exactly 0 essentially removes the corresponding feature from the model. Zeroing out features will save RAM and may reduce noise in the model.
+
+For example, consider a housing data set that covers not just California but the entire globe. Bucketing global latitude at the minute level (60 minutes per degree) gives about 10,000 dimensions in a sparse encoding; global longitude at the minute level gives about 20,000 dimensions. A feature cross of these two features would result in roughly 200,000,000 dimensions. Many of those 200,000,000 dimensions represent areas of such limited residence (for example, the middle of the ocean) that it would be difficult to use that data to generalize effectively. It would be silly to pay the RAM cost of storing these unneeded dimensions. Therefore, it would be nice to encourage the weights for the meaningless dimensions to drop to exactly 0, which would allow us to avoid paying for the storage cost of these model coefficients at inference time.
+
+We might be able to encode this idea into the optimization problem done at training time, by adding an appropriately chosen regularization term.
+
+Would L2 regularization accomplish this task? Unfortunately not. L2 regularization encourages weights to be small, but doesn't force them to exactly 0.0.
+
+An alternative idea would be to try and create a regularization term that penalizes the count of non-zero coefficient values in a model. Increasing this count would only be justified if there was a sufficient gain in the model's ability to fit the data. Unfortunately, while this count-based approach is intuitively appealing, it would turn our convex optimization problem into a non-convex optimization problem. So this idea, known as L0 regularization isn't something we can use effectively in practice.
+
+However, there is a regularization term called L1 regularization that serves as an approximation to L0, but has the advantage of being convex and thus efficient to compute. So we can use L1 regularization to encourage many of the uninformative coefficients in our model to be exactly 0, and thus reap RAM savings at inference time.
+
+#### $L_1$ vs. $L_2$ regularization.
+
+$L_2$ and $L_1$ penalize weights differently:
+
+- $L_2$ penalizes $weight^2$.
+- $L_1$ penalizes $|weight|$. 
+
+Consequently, $L_2$ and $L_1$ have different derivatives:
+
+- The derivative of $L_2$ is 2 * weight.
+- The derivative of $L_1$ is k (a constant, whose value is independent of weight).
+
+You can think of the derivative of $L_2$ as a force that removes x% of the weight every time. As Zeno knew, even if you remove x percent of a number billions of times, the diminished number will still never quite reach zero. (Zeno was less familiar with floating-point precision limitations, which could possibly produce exactly zero.) At any rate, $L_2$ does not normally drive weights to zero.
+
+You can think of the derivative of $L_1$ as a force that subtracts some constant from the weight every time. However, thanks to absolute values, $L_1$ has a discontinuity at 0, which causes subtraction results that cross 0 to become zeroed out. For example, if subtraction would have forced a weight from +0.1 to -0.2, $L_1$ will set the weight to exactly 0. Eureka, $L_1$ zeroed out the weight.
+
+$L_1$ regularization—penalizing the absolute value of all the weights—turns out to be quite efficient for wide models.
+
+Note that this description is true for a one-dimensional model.
+
+Click the Play button (play_arrow) below to compare the effect $L_1$ and $L_2$ regularization have on a network of weights.
+
+![Alt text](../images/effect-of-regularization-0-epochs.png)
+
+![Alt text](../images/effect-of-regularization-500-epochs.png)
+
+## Neural Networks
+
+Neural networks are a more sophisticated version of feature crosses. In essence, neural networks learn the appropriate feature crosses for you.
+
+### Neural Networks: Structure
+
+If you recall from the Feature Crosses unit, the following classification problem is nonlinear:
+
+![Alt text](../images/nonlinear-problem.png)
+
+**Figure 1. Nonlinear classification problem.**
+
+"Nonlinear" means that you can't accurately predict a label with a model of the form $b + w_1x_1 + w_2x_2$ In other words, the "decision surface" is not a line. Previously, we looked at feature crosses as one possible approach to modeling nonlinear problems.
+
+Now consider the following data set:
+
+![Alt text](../images/complex-nonlinear.png)
+
+**Figure 2. A more difficult nonlinear classification problem.**
+
+The data set shown in Figure 2 can't be solved with a linear model.
+
+To see how neural networks might help with nonlinear problems, let's start by representing a linear model as a graph:
+
+![Alt text](../images/linear-model-as-graph.png)
+
+**Figure 3. Linear model as graph.**
+
+Each blue circle represents an input feature, and the green circle represents the weighted sum of the inputs.
+
+How can we alter this model to improve its ability to deal with nonlinear problems?
+
+#### Hidden Layers
+
+In the model represented by the following graph, we've added a "hidden layer" of intermediary values. Each yellow node in the hidden layer is a weighted sum of the blue input node values. The output is a weighted sum of the yellow nodes.
+
+![Alt text](../images/two-layer-model-as-graph.png)
+
+**Figure 4. Graph of two-layer model.**
+
+Is this model linear? Yes—its output is still a linear combination of its inputs.
+
+In the model represented by the following graph, we've added a second hidden layer of weighted sums.
+
+![Alt text](../images/three-layer-model-as-graph.png)
+
+**Figure 5. Graph of three-layer model.**
+
+Is this model still linear? Yes, it is. When you express the output as a function of the input and simplify, you get just another weighted sum of the inputs. This sum won't effectively model the nonlinear problem in Figure 2.
+
+#### Activation Functions
+
+To model a nonlinear problem, we can directly introduce a nonlinearity. We can pipe each hidden layer node through a nonlinear function.
+
+In the model represented by the following graph, the value of each node in Hidden Layer 1 is transformed by a nonlinear function before being passed on to the weighted sums of the next layer. This nonlinear function is called the activation function.
+
+![Alt text](../images/three-layer-model-with-activation.png)
+
+**Figure 6. Graph of three-layer model with activation function.**
+
+Now that we've added an activation function, adding layers has more impact. Stacking nonlinearities on nonlinearities lets us model very complicated relationships between the inputs and the predicted outputs. In brief, each layer is effectively learning a more complex, higher-level function over the raw inputs. If you'd like to develop more intuition on how this works, see [Chris Olah's excellent blog post](http://colah.github.io/posts/2014-03-NN-Manifolds-Topology/).
+
+#### Common Activation Functions
+
+The f1ollowing sigmoid activation function converts the weighted sum to a value between 0 and 1.
+
+Here's a plot:
+
+$F(x)=\frac{1} {1+e^{-x}}$
+
+![Alt text](../images/sigmoid-function-graph.png)
+
+**Figure 7. Sigmoid activation function.**
+
+The following **rectified linear unit** activation function (or ReLU, for short) often works a little better than a smooth function like the sigmoid, while also being significantly easier to compute.
+
+$F(x)=max(0,x)$
+
+The superiority of ReLU is based on empirical findings, probably driven by ReLU having a more useful range of responsiveness. A sigmoid's responsiveness falls off relatively quickly on both sides.
+
+![ReLU activation function](../images/relu-function.png)
+
+**Figure 8. ReLU activation function.**
+
+In fact, any mathematical function can serve as an activation function. Suppose that 
+ represents our activation function (Relu, Sigmoid, or whatever). Consequently, the value of a node in the network is given by the following formula:
+
+$\sigma(\boldsymbol w \cdot \boldsymbol x+b)$
+
+TensorFlow provides out-of-the-box support for many activation functions. You can find these activation functions within TensorFlow's list of wrappers for primitive neural network operations. That said, we still recommend starting with ReLU.
+
+#### Summary
+
+Now our model has all the standard components of what people usually mean when they say "neural network":
+
+- A set of nodes, analogous to neurons, organized in layers.
+- A set of weights representing the connections between each neural network layer and the layer beneath it. The layer beneath may be another neural network layer, or some other kind of layer.
+- A set of biases, one for each node.
+- An activation function that transforms the output of each node in a layer. Different layers may have different activation functions.
+
+> :warning: A caveat: neural networks aren't necessarily always better than feature crosses, but neural networks do offer a flexible alternative that works well in many cases.
+
+### Neural Networks: Programming Exercise
+
+See [Intro to Neural Networks Colab exercise]()
