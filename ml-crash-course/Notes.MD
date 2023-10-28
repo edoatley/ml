@@ -88,6 +88,32 @@
       - [Common Activation Functions](#common-activation-functions)
       - [Summary](#summary)
     - [Neural Networks: Programming Exercise](#neural-networks-programming-exercise)
+  - [Training Neural Networks](#training-neural-networks)
+    - [Failure Cases](#failure-cases)
+      - [Vanishing Gradients](#vanishing-gradients)
+      - [Exploding Gradients](#exploding-gradients)
+      - [Dead ReLU Units](#dead-relu-units)
+    - [Dropout Regularization](#dropout-regularization)
+  - [Multi-Class Neural Networks](#multi-class-neural-networks)
+    - [Multi-Class Neural Networks: One vs. All](#multi-class-neural-networks-one-vs-all)
+    - [Multi-Class Neural Networks: Softmax](#multi-class-neural-networks-softmax)
+      - [Softmax Options](#softmax-options)
+      - [One Label vs. Many Labels](#one-label-vs-many-labels)
+    - [Multi-Class Neural Networks: Programming Exercise](#multi-class-neural-networks-programming-exercise)
+  - [Embeddings](#embeddings)
+    - [Embeddings: Motivation From Collaborative Filtering](#embeddings-motivation-from-collaborative-filtering)
+      - [Arrange Movies on a One-Dimensional Number Line](#arrange-movies-on-a-one-dimensional-number-line)
+      - [Arrange Movies in a Two-Dimensional Space](#arrange-movies-in-a-two-dimensional-space)
+    - [Embeddings: Categorical Input Data](#embeddings-categorical-input-data)
+      - [Size of Network](#size-of-network)
+      - [Lack of Meaningful Relations Between Vectors](#lack-of-meaningful-relations-between-vectors)
+      - [The Solution: Embeddings](#the-solution-embeddings)
+    - [Embeddings: Translating to a Lower-Dimensional Space](#embeddings-translating-to-a-lower-dimensional-space)
+      - [Shrinking the network](#shrinking-the-network)
+    - [Embeddings: Obtaining Embeddings](#embeddings-obtaining-embeddings)
+      - [Standard Dimensionality Reduction Techniques](#standard-dimensionality-reduction-techniques)
+      - [Training an Embedding as Part of a Larger Model](#training-an-embedding-as-part-of-a-larger-model)
+  - [Production ML Systems](#production-ml-systems)
 
 
 ## Refs
@@ -1608,3 +1634,273 @@ Now our model has all the standard components of what people usually mean when t
 ### Neural Networks: Programming Exercise
 
 See [Intro to Neural Networks Colab exercise]()
+
+## Training Neural Networks
+
+Backpropagation is the most common training algorithm for neural networks. It makes gradient descent feasible for multi-layer neural networks. TensorFlow handles backpropagation automatically, so you don't need a deep understanding of the algorithm. To get a sense of how it works, walk through the following: [Backpropagation algorithm visual explanation](https://developers.google.com/machine-learning/crash-course/backprop-scroll). As you scroll through the preceding explanation, note the following:
+
+- How data flows through the graph.
+- How dynamic programming lets us avoid computing exponentially many paths through the graph. Here "dynamic programming" just means recording intermediate results on the forward and backward passes.
+
+### Failure Cases
+
+There are a number of common ways for backpropagation to go wrong.
+
+#### Vanishing Gradients
+
+The gradients for the lower layers (closer to the input) can become very small. In deep networks, computing these gradients can involve taking the product of many small terms.
+
+When the gradients vanish toward 0 for the lower layers, these layers train very slowly, or not at all.
+
+The ReLU activation function can help prevent vanishing gradients.
+
+#### Exploding Gradients
+
+If the weights in a network are very large, then the gradients for the lower layers involve products of many large terms. In this case you can have exploding gradients: gradients that get too large to converge.
+
+Batch normalization can help prevent exploding gradients, as can lowering the learning rate.
+
+#### Dead ReLU Units
+
+Once the weighted sum for a ReLU unit falls below 0, the ReLU unit can get stuck. It outputs 0 activation, contributing nothing to the network's output, and gradients can no longer flow through it during backpropagation. With a source of gradients cut off, the input to the ReLU may not ever change enough to bring the weighted sum back above 0.
+
+Lowering the learning rate can help keep ReLU units from dying.
+
+### Dropout Regularization
+
+Yet another form of regularization, called Dropout, is useful for neural networks. It works by randomly "dropping out" unit activations in a network for a single gradient step. The more you drop out, the stronger the regularization:
+
+0.0 = No dropout regularization.
+1.0 = Drop out everything. The model learns nothing.
+Values between 0.0 and 1.0 = More useful.
+
+## Multi-Class Neural Networks
+
+Earlier, you encountered binary classification models that could pick between one of two possible choices, such as whether:
+
+- A given email is spam or not spam.
+- A given tumor is malignant or benign.
+
+In this module, we'll investigate multi-class classification, which can pick from multiple possibilities. For example:
+
+- Is this dog a beagle, a basset hound, or a bloodhound?
+- Is this flower a Siberian Iris, Dutch Iris, Blue Flag Iris, or Dwarf Bearded Iris?
+- Is that plane a Boeing 747, Airbus 320, Boeing 777, or Embraer 190?
+- Is this an image of an apple, bear, candy, dog, or egg?
+
+Some real-world multi-class problems entail choosing from millions of separate classes. For example, consider a multi-class classification model that can identify the image of just about anything.
+
+### Multi-Class Neural Networks: One vs. All
+
+One vs. all provides a way to leverage binary classification. Given a classification problem with N possible solutions, a one-vs.-all solution consists of N separate binary classifiers—one binary classifier for each possible outcome. During training, the model runs through a sequence of binary classifiers, training each to answer a separate classification question. For example, given a picture of a dog, five different recognizers might be trained, four seeing the image as a negative example (not an apple, not a bear, etc.) and one seeing the image as a positive example (a dog). That is:
+
+1. Is this image an apple? No.
+2. Is this image a bear? No.
+3. Is this image candy? No.
+4. Is this image a dog? Yes.
+5. Is this image an egg? No.
+
+This approach is fairly reasonable when the total number of classes is small, but becomes increasingly inefficient as the number of classes rises.
+
+We can create a significantly more efficient one-vs.-all model with a deep neural network in which each output node represents a different class. The following figure suggests this approach:
+
+![A neural network with five hidden layers and five output layers.](../images/one-vs-all-neural-net.png)
+
+**Figure 1. A one-vs.-all neural network.**
+
+### Multi-Class Neural Networks: Softmax
+
+Recall that logistic regression produces a decimal between 0 and 1.0. For example, a logistic regression output of 0.8 from an email classifier suggests an 80% chance of an email being spam and a 20% chance of it being not spam. Clearly, the sum of the probabilities of an email being either spam or not spam is 1.0.
+
+**Softmax** extends this idea into a multi-class world. That is, Softmax assigns decimal probabilities to each class in a multi-class problem. Those decimal probabilities must add up to 1.0. This additional constraint helps training converge more quickly than it otherwise would.
+
+For example, returning to the image analysis we saw in Figure 1, Softmax might produce the following likelihoods of an image belonging to a particular class:
+
+| Class   |	Probability |
+| --- | --- |
+| apple   |	0.001 |
+| bear    |	0.04  |
+| candy   |	0.008 |
+| dog     |	0.95  |
+| egg     |	0.001 |
+
+Softmax is implemented through a neural network layer just before the output layer. The Softmax layer must have the same number of nodes as the output layer.
+
+![Softmax](../images/softmax.png)
+
+**Figure 2. A Softmax layer within a neural network.**
+
+Click the plus icon to see the Softmax equation.
+
+#### Softmax Options
+Consider the following variants of Softmax:
+
+Full Softmax is the Softmax we've been discussing; that is, Softmax calculates a probability for every possible class.
+
+Candidate sampling means that Softmax calculates a probability for all the positive labels but only for a random sample of negative labels. For example, if we are interested in determining whether an input image is a beagle or a bloodhound, we don't have to provide probabilities for every non-doggy example.
+
+Full Softmax is fairly cheap when the number of classes is small but becomes prohibitively expensive when the number of classes climbs. Candidate sampling can improve efficiency in problems having a large number of classes.
+
+####  One Label vs. Many Labels
+
+Softmax assumes that each example is a member of exactly one class. Some examples, however, can simultaneously be a member of multiple classes. For such examples:
+
+- You may not use Softmax.
+- You must rely on multiple logistic regressions.
+
+For example, suppose your examples are images containing exactly one item—a piece of fruit. Softmax can determine the likelihood of that one item being a pear, an orange, an apple, and so on. If your examples are images containing all sorts of things—bowls of different kinds of fruit—then you'll have to use multiple logistic regressions instead.
+
+### Multi-Class Neural Networks: Programming Exercise
+
+See [Multi-Class Classification with MNIST](./Multi-Class-Classification.MD)
+
+## Embeddings
+
+An embedding is a relatively low-dimensional space into which you can translate high-dimensional vectors. Embeddings make it easier to do machine learning on large inputs like sparse vectors representing words. Ideally, an embedding captures some of the semantics of the input by placing semantically similar inputs close together in the embedding space. An embedding can be learned and reused across models.
+
+### Embeddings: Motivation From Collaborative Filtering
+
+Collaborative filtering is the task of making predictions about the interests of a user based on interests of many other users. As an example, let's look at the task of movie recommendation. Suppose we have 500,000 users, and a list of the movies each user has watched (from a catalog of 1,000,000 movies). Our goal is to recommend movies to users.
+
+To solve this problem some method is needed to determine which movies are similar to each other. We can achieve this goal by embedding the movies into a low-dimensional space created such that similar movies are nearby.
+
+Before describing how we can learn the embedding, we first explore the type of qualities we want the embedding to have, and how we will represent the training data for learning the embedding.
+
+#### Arrange Movies on a One-Dimensional Number Line
+
+To help develop intuition about embeddings, on a piece of paper, try to arrange the following movies on a one-dimensional number line so that the movies nearest each other are the most closely related:
+
+| Movie|   Rating|   Description |
+| --- | --- | --- |
+| Bleu|  R|   A French widow grieves the loss of her husband and daughter after they perish in a car accident. |
+| The Dark Knight Rises|   PG-13|  Batman endeavors to save Gotham City from nuclear annihilation in this sequel to The Dark Knight, set in the DC Comics universe. |
+| Harry Potter and the Sorcerer's Stone|   PG|   A orphaned boy discovers he is a wizard and enrolls in Hogwarts School of Witchcraft and Wizardry, where he wages his  |first battle against the evil Lord Voldemort.
+| The Incredibles|   PG|   A family of superheroes forced to live as civilians in suburbia come out of retirement to save the superhero race from Syndrome and his killer  |robot.
+| Shrek|   PG|   A lovable ogre and his donkey sidekick set off on a mission to rescue Princess Fiona, who is emprisoned in her castle by a dragon. |
+| Star Wars|   PG|   Luke Skywalker and Han Solo team up with two androids to rescue Princess Leia and save the galaxy. |
+| The Triplets of Belleville|  PG-13|   When professional cycler Champion is kidnapped during the Tour de France, his grandmother and overweight dog journey overseas to  |rescue him, with the help of a trio of elderly jazz singers.
+| Memento	| R	| An amnesiac desperately seeks to solve his wife's murder by tattooing clues onto his body. |
+
+![Alt text](../images/1d-movie-embedding.png)
+
+**Figure 1. A possible one-dimensional arrangement**
+
+While this embedding does help capture how much the movie is geared towards children versus adults, there are many more aspects of a movie that one would want to capture when making recommendations. Let's take this example one step further, adding a second embedding dimension.
+
+#### Arrange Movies in a Two-Dimensional Space
+
+Try the same exercise as before, but this time arrange the same movies in a two-dimensional space.
+
+![Alt text](../images/2d-movie-embedding.png)
+
+**Figure 2. A possible two-dimensional arrangement**
+
+With this two-dimensional embedding we define a distance between movies such that movies are nearby (and thus inferred to be similar) if they are both alike in the extent to which they are geared towards children versus adults, as well as the extent to which they are blockbuster movies versus arthouse movies. These, of course, are just two of many characteristics of movies that might be important.
+
+More generally, what we've done is mapped these movies into an embedding space, where each word is described by a two-dimensional set of coordinates. For example, in this space, "Shrek" maps to (-1.0, 0.95) and "Bleu" maps to (0.65, -0.2). In general, when learning a d-dimensional embedding, each movie is represented by d real-valued numbers, each one giving the coordinate in one dimension.
+
+In this example, we have given a name to each dimension. When learning embeddings, the individual dimensions are not learned with names. Sometimes, we can look at the embeddings and assign semantic meanings to the dimensions, and other times we cannot. Often, each such dimension is called a latent dimension, as it represents a feature that is not explicit in the data but rather inferred from it.
+
+Ultimately, it is the distances between movies in the embedding space that are meaningful, rather than a single movie's values along any given dimension.
+
+### Embeddings: Categorical Input Data
+
+Categorical data refers to input features that represent one or more discrete items from a finite set of choices. For example, it can be the set of movies a user has watched, the set of words in a document, or the occupation of a person.
+
+Categorical data is most efficiently represented via sparse tensors, which are tensors with very few non-zero elements. For example, if we're building a movie recommendation model, we can assign a unique ID to each possible movie, and then represent each user by a sparse tensor of the movies they have watched, as shown in Figure 3.
+
+![A sample input for our movie recommendation problem.](../images/sample-input-movies.png)
+
+**Figure 3. Data for our movie recommendation problem.**
+
+Each row of the matrix in Figure 3 is an example capturing a user's movie-viewing history, and is represented as a sparse tensor because each user only watches a small fraction of all possible movies. The last row corresponds to the sparse tensor [1, 3, 999999], using the vocabulary indices shown above the movie icons.
+
+Likewise one can represent words, sentences, and documents as sparse vectors where each word in the vocabulary plays a role similar to the movies in our recommendation example.
+
+In order to use such representations within a machine learning system, we need a way to represent each sparse vector as a vector of numbers so that semantically similar items (movies or words) have similar distances in the vector space. But how do you represent a word as a vector of numbers?
+
+The simplest way is to define a giant input layer with a node for every word in your vocabulary, or at least a node for every word that appears in your data. If 500,000 unique words appear in your data, you could represent a word with a length 500,000 vector and assign each word to a slot in the vector.
+
+If you assign "horse" to index 1247, then to feed "horse" into your network you might copy a 1 into the 1247th input node and 0s into all the rest. This sort of representation is called a one-hot encoding, because only one index has a non-zero value.
+
+More typically your vector might contain counts of the words in a larger chunk of text. This is known as a "bag of words" representation. In a bag-of-words vector, several of the 500,000 nodes would have non-zero value.
+
+But however you determine the non-zero values, one-node-per-word gives you very sparse input vectors—very large vectors with relatively few non-zero values. Sparse representations have a couple of problems that can make it hard for a model to learn effectively.
+
+#### Size of Network
+
+Huge input vectors mean a super-huge number of weights for a neural network. If there are M words in your vocabulary and N nodes in the first layer of the network above the input, you have MxN weights to train for that layer. A large number of weights causes further problems:
+
+Amount of data. The more weights in your model, the more data you need to train effectively.
+
+Amount of computation. The more weights, the more computation required to train and use the model. It's easy to exceed the capabilities of your hardware.
+
+#### Lack of Meaningful Relations Between Vectors
+
+If you feed the pixel values of RGB channels into an image classifier, it makes sense to talk about "close" values. Reddish blue is close to pure blue, both semantically and in terms of the geometric distance between vectors. But a vector with a 1 at index 1247 for "horse" is not any closer to a vector with a 1 at index 50,430 for "antelope" than it is to a vector with a 1 at index 238 for "television".
+
+#### The Solution: Embeddings
+
+The solution to these problems is to use embeddings, which translate large sparse vectors into a lower-dimensional space that preserves semantic relationships. We'll explore embeddings intuitively, conceptually, and programmatically in the following sections of this module.
+
+### Embeddings: Translating to a Lower-Dimensional Space
+
+You can solve the core problems of sparse input data by mapping your high-dimensional data into a lower-dimensional space.
+
+As you saw in the movie exercises earlier, even a small multi-dimensional space provides the freedom to group semantically similar items together and keep dissimilar items far apart. Position (distance and direction) in the vector space can encode semantics in a good embedding. For example, the following visualizations of real embeddings show geometrical relationships that capture semantic relations like the relation between a country and its capital:
+
+![Three examples of word embeddings that represent word relationships geometrically: gender (man/woman and king/queen), verb tense (walking/walked and swimming/swam), and capital cities (Turkey/Ankara and Vietnam/Hanoi)](../images/embeddings.png)
+
+**Figure 4. Embeddings can produce remarkable analogies.**
+
+This sort of meaningful space gives your machine learning system opportunities to detect patterns that may help with the learning task.
+
+#### Shrinking the network
+
+While we want enough dimensions to encode rich semantic relations, we also want an embedding space that is small enough to allow us to train our system more quickly. A useful embedding may be on the order of hundreds of dimensions. This is likely several orders of magnitude smaller than the size of your vocabulary for a natural language task.
+
+### Embeddings: Obtaining Embeddings
+
+There are a number of ways to get an embedding, including a state-of-the-art algorithm created at Google.
+
+#### Standard Dimensionality Reduction Techniques
+
+There are many existing mathematical techniques for capturing the important structure of a high-dimensional space in a low dimensional space. In theory, any of these techniques could be used to create an embedding for a machine learning system.
+
+For example, principal component analysis (PCA) has been used to create word embeddings. Given a set of instances like bag of words vectors, PCA tries to find highly correlated dimensions that can be collapsed into a single dimension.
+
+#### Word2vec
+
+Word2vec is an algorithm invented at Google for training word embeddings. Word2vec relies on the distributional hypothesis to map semantically similar words to geometrically close embedding vectors.
+
+The distributional hypothesis states that words which often have the same neighboring words tend to be semantically similar. Both "dog" and "cat" frequently appear close to the word "veterinarian", and this fact reflects their semantic similarity. As the linguist John Firth put it in 1957, "You shall know a word by the company it keeps".
+
+Word2Vec exploits contextual information like this by training a neural net to distinguish actually co-occurring groups of words from randomly grouped words. The input layer takes a sparse representation of a target word together with one or more context words. This input connects to a single, smaller hidden layer.
+
+In one version of the algorithm, the system makes a negative example by substituting a random noise word for the target word. Given the positive example "the plane flies", the system might swap in "jogging" to create the contrasting negative example "the jogging flies".
+
+The other version of the algorithm creates negative examples by pairing the true target word with randomly chosen context words. So it might take the positive examples (the, plane), (flies, plane) and the negative examples (compiled, plane), (who, plane) and learn to identify which pairs actually appeared together in text.
+
+The classifier is not the real goal for either version of the system, however. After the model has been trained, you have an embedding. You can use the weights connecting the input layer with the hidden layer to map sparse representations of words to smaller vectors. This embedding can be reused in other classifiers.
+
+For more information about word2vec, see the tutorial on tensorflow.org
+
+#### Training an Embedding as Part of a Larger Model
+
+You can also learn an embedding as part of the neural network for your target task. This approach gets you an embedding well customized for your particular system, but may take longer than training the embedding separately.
+
+In general, when you have sparse data (or dense data that you'd like to embed), you can create an embedding unit that is just a special type of hidden unit of size d. This embedding layer can be combined with any other features and hidden layers. As in any DNN, the final layer will be the loss that is being optimized. For example, let's say we're performing collaborative filtering, where the goal is to predict a user's interests from the interests of other users. We can model this as a supervised learning problem by randomly setting aside (or holding out) a small number of the movies that the user has watched as the positive labels, and then optimize a softmax loss.
+
+![Alt text](../images/sample-dnn-architecture-for-movies.png)
+
+**Figure 5. A sample DNN architecture for learning movie embeddings from collaborative filtering data.**
+
+As another example if you want to create an embedding layer for the words in a real-estate ad as part of a DNN to predict housing prices then you'd optimize an L2 Loss using the known sale price of homes in your training data as the label.
+
+When learning a d-dimensional embedding each item is mapped to a point in a d-dimensional space so that the similar items are nearby in this space. Figure 6 helps to illustrate the relationship between the weights learned in the embedding layer and the geometric view. The edge weights between an input node and the nodes in the d-dimensional embedding layer correspond to the coordinate values for each of the d axes.
+
+![Alt text](../images/geometric-view-of-embedding-weights.png)
+
+**Figure 6. A geometric view of the embedding layer weights.**
+
+## Production ML Systems
