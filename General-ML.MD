@@ -11,3 +11,7 @@
 - [Get started with ML](https://machinelearningmastery.com/start-here/)
 - [Stock Market Prediction](https://github.com/alberduris/SirajsCodingChallenges)
 - [8 Fun Machine Learning Projects for Beginners](https://elitedatascience.com/machine-learning-projects-for-beginners)
+
+![Git plugins](./images/gitplugins.png)
+also see
+https://www.digitalocean.com/community/tutorials/how-to-use-git-integration-in-visual-studio-code
