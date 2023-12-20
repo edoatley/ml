@@ -12,3 +12,5 @@
 - [Stock Market Prediction](https://github.com/alberduris/SirajsCodingChallenges)
 - [8 Fun Machine Learning Projects for Beginners](https://elitedatascience.com/machine-learning-projects-for-beginners)
 - [Data Preparation and Feature Engineering in ML](https://developers.google.com/machine-learning/data-prep/?utm_source=mlcc&utm_campaign=mlcc-next-steps&utm_medium=referral&utm_content=data-prep-ss)
+- [Data Camp](https://www.datacamp.com/promo/end-of-year-23)
+- [Data Camp - 25 projects](https://www.datacamp.com/blog/machine-learning-projects-for-all-levels)
