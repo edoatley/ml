@@ -6,3 +6,4 @@ missingno==0.5.2
 pip-chill==1.0.3
 scikit-plot==0.3.7
 tensorflow-decision-forests==1.9.0
+xgboost==2.0.3
