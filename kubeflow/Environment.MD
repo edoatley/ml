@@ -2,33 +2,24 @@
 
 - [Kubeflow Environment Setup](#kubeflow-environment-setup)
   - [Local KubeFlow Setup](#local-kubeflow-setup)
-    - [1. Install Vagrant](#1-install-vagrant)
-    - [2. Install MiniKube](#2-install-minikube)
-    - [3. Install kubeflow](#3-install-kubeflow)
-    - [4. Check pods up](#4-check-pods-up)
-    - [5. Kubeflow UI](#5-kubeflow-ui)
+    - [1. Install MiniKube](#1-install-minikube)
+    - [2. Install kubeflow](#2-install-kubeflow)
+    - [3. Check pods up](#3-check-pods-up)
+    - [4. Kubeflow UI](#4-kubeflow-ui)
   - [Install on a Remote Ubuntu VM](#install-on-a-remote-ubuntu-vm)
-  - [Build an ML Pipeline](#build-an-ml-pipeline)
 
 
 ## Local KubeFlow Setup
 
 After trying so many variants to get this working on MacBook I ended up with this one https://dagshub.com/blog/how-to-install-kubeflow-locally/ which worked well
 
-### 1. Install Vagrant
-
-```bash
-brew tap hashicorp/tap
-brew install hashicorp/tap/hashicorp-vagrant
-```
-
-### 2. Install MiniKube
+### 1. Install MiniKube
 
 ```bash
 brew install minikube kustomize
 ```
 
-### 3. Install kubeflow
+### 2. Install kubeflow
 
 ```bash
 git clone https://github.com/kubeflow/manifests.git
@@ -36,7 +27,7 @@ cd mainifests
 while ! kustomize build example | awk '!/well-defined/' | kubectl apply -f -; do echo "Retrying to apply resources"; sleep 10; done
 ```
 
-### 4. Check pods up
+### 3. Check pods up
 
 ```bash
 kubectl get pods -A
@@ -101,7 +92,7 @@ oauth2-proxy                oauth2-proxy-68df7496c4-rsv48                       
 oauth2-proxy                oauth2-proxy-68df7496c4-w6rbb                            1/1     Running     1 (4m12s ago)   16h
 ```
 
-### 5. Kubeflow UI
+### 4. Kubeflow UI
 
 Expose outside the cluster
 
@@ -115,9 +106,9 @@ The default username is user@example.com and the password is 12341234. Once you 
 
 ## Install on a Remote Ubuntu VM
 
-https://charmed-kubeflow.io/docs/get-started-with-charmed-kubeflow
+For this I built a cloud-init.yaml based on the official docs: https://charmed-kubeflow.io/docs/get-started-with-charmed-kubeflow and deployed to Azure see:
 
-
-## Build an ML Pipeline
-
-Going to try this with help from this [blog](https://blogs.cisco.com/developer/readyformlops01?ccid=ai-page&dtid=devblog&oid=florianpachinger-fy23-q1-0000-machinelearningops03-ww)
+- [cloud-init.yaml](./resources/cloud-init.yaml) - cloud-init definition
+- [sandbox-vm.sh](./resources/sandbox-vm.sh) - deploy the VM
+- [sandbox-init-logs-download.sh](./resources/sandbox-init-logs-download.sh) - download the Cloud Init logs from the VM
+- [sandbox-connect.sh](./resources/sandbox-connect.sh) - connect to the sandbox over Azure Bastion

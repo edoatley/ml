@@ -1,0 +1,53 @@
+#cloud-config
+apt_update: true
+apt_upgrade: true
+package_update: true
+package_upgrade: true
+
+packages:
+  - jq
+  - kubectl
+  - kustomize
+
+runcmd:
+ # Check the environment
+ - "echo User=$CLOUDINIT_INSTALL_USER"
+ - "echo Home=$CLOUDINIT_INSTALL_HOME"
+
+ # Install microk8s
+ - "snap install microk8s --classic --channel=1.29/stable"
+ 
+ # Add microk8s kubeconfig for azureuser
+ - "su azureuser -c 'mkdir -p $CLOUDINIT_INSTALL_USER/.kube && touch $CLOUDINIT_INSTALL_USER/.kube/config'"
+ - "microk8s config > $CLOUDINIT_INSTALL_USER/.kube/config"
+ - "snap alias microk8s.kubectl kubectl"
+ 
+ # Enable microk8s addons
+ - "microk8s enable dns hostpath-storage ingress metallb:10.64.140.43-10.64.140.49 rbac "
+ - "/snap/bin/microk8s.status --wait-ready"
+ 
+  - "usermod -a -G microk8s $CLOUDINIT_INSTALL_USER"
+
+ # Install Juju
+ - "snap install juju --classic --channel=3.1/stable"
+ - "mkdir -p $CLOUDINIT_INSTALL_USER/.local/share"
+ - "microk8s config | juju add-k8s my-k8s --client"
+ - "juju bootstrap my-k8s uk8sx"
+
+  # Deploy Kubeflow
+ - "juju add-model kubeflow"
+ - "juju deploy kubeflow --trust  --channel=1.8/stable"
+
+writeFiles:
+  - path: /etc/environment
+    content: |
+      export CLOUDINIT_INSTALL_USER=azureuser
+      export CLOUDINIT_INSTALL_HOME=/home/azureuser
+      
+  - path: /etc/sysctl.conf
+    content: |
+      fs.inotify.max_user_instances=1280
+      fs.inotify.max_user_watches=655360
+
+  - path: /home/azureuser/.bashrc
+    content: alias kubectl=microk8s.kubectl
