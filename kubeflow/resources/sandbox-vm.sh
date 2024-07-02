@@ -56,6 +56,7 @@ az vm create --resource-group $RESOURCE_GROUP --name $VM_NAME \
   --public-ip-address "" \
   --authentication-type ssh \
   --ssh-key-value $VM_SSH_KEY.pub \
+  --os-disk-delete-option delete \
   --admin-username ${VM_ADMIN_USER} \
   --user-data $VM_USER_DATA
 

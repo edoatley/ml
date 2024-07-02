@@ -15,6 +15,8 @@ VM_USER_DATA="cloud-init.yaml"
 az vm delete -g $RESOURCE_GROUP -n $VM_NAME --yes
 az vm wait --deleted -g $RESOURCE_GROUP -n $VM_NAME
 
+sleep 120
+
 # Recreate the VM and wait for it to be running
 az vm create --resource-group $RESOURCE_GROUP --name $VM_NAME \
   --image $VM_IMAGE \
@@ -24,6 +26,7 @@ az vm create --resource-group $RESOURCE_GROUP --name $VM_NAME \
   --nsg "nsg-$VM_NAME" \
   --public-ip-address "" \
   --authentication-type ssh \
+  --os-disk-delete-option delete \
   --ssh-key-value $VM_SSH_KEY.pub \
   --admin-username ${VM_ADMIN_USER} \
   --user-data $VM_USER_DATA

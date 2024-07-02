@@ -112,3 +112,5 @@ For this I built a cloud-init.yaml based on the official docs: https://charmed-k
 - [sandbox-vm.sh](./resources/sandbox-vm.sh) - deploy the VM
 - [sandbox-init-logs-download.sh](./resources/sandbox-init-logs-download.sh) - download the Cloud Init logs from the VM
 - [sandbox-connect.sh](./resources/sandbox-connect.sh) - connect to the sandbox over Azure Bastion
+
+kubectl port-forward svc/istio-ingressgateway -n kubeflow 8080:80
