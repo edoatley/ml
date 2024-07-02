@@ -1,44 +1,37 @@
 #cloud-config
 apt_update: true
-apt_upgrade: true
+# apt_upgrade: true
 package_update: true
-package_upgrade: true
-
-packages:
-  - jq
-  - kubectl
-  - kustomize
+# package_upgrade: true
 
 runcmd:
-  # Install microk8s
-  - "snap install microk8s --classic --channel=1.24/stable"
-  #- "snap install microk8s --classic --channel=1.29/stable"
- 
-  # Add microk8s kubeconfig for azureuser
-  - "su azureuser -c 'mkdir -p /home/azureuser/.kube && touch /home/azureuser/.kube/config'"
-  - "microk8s config > /home/azureuser/.kube/config"
-  - "snap alias microk8s.kubectl kubectl"
+  # Create Folders
+  - "mkdir -p /home/azureuser/.local/share /home/azureuser/snap/juju /home/azureuser/.kube"
+  - "chown azureuser:azureuser /home/azureuser -R"
+
+  # Install dependencies
+  - "snap install jq"
+  - "snap install kustomize"
+
+  # Setup microk8s
+  - "snap install microk8s --classic --channel=1.29/stable"
   - "usermod -a -G microk8s azureuser"
- 
-  # Enable microk8s addons
-  - "microk8s enable dns hostpath-storage host-access ingress metallb:10.64.140.43-10.64.140.49"
+  - "microk8s enable dns hostpath-storage ingress metallb:10.64.140.43-10.64.140.49 rbac"
   - "microk8s status --wait-ready"
+  - "snap alias microk8s.kubectl kubectl"
+  - "microk8s config > /home/azureuser/.kube/config"
+  - "chown azureuser:azureuser /home/azureuser/.kube -R"
 
-  # Ensure the Juju home directory exists with correct permissions
-  - "mkdir -p /home/azureuser/.local/share/juju"
-  - "chown azureuser:azureuser /home/azureuser/.local -R"
-
-  # Install Juju
-  - "snap install juju --classic --channel=2.9/stable"
-  - "su azureuser -c 'juju bootstrap microk8s'"
-  # - "snap install juju --classic --channel=3.5/stable"
-  # - "su azureuser -c 'juju add-k8s my-k8s --client'"
-  # - "su azureuser -c 'juju bootstrap my-k8s uk8sx'"
+  # Install juju
+  - "su azureuser -c 'sudo snap install juju --channel=3.4/stable'"
+  
+  # Bootstrap Juju controller
+  - "su azureuser -c 'juju add-k8s my-k8s --client'"
+  - "su azureuser -c 'juju bootstrap my-k8s uk8sx'"
 
   # Deploy Kubeflow
   - "su azureuser -c 'juju add-model kubeflow'"
-  - "su azureuser -c 'juju deploy kubeflow --trust --channel=1.7/stable'"
-  # - "su azureuser -c 'juju deploy kubeflow --trust --channel=1.8/stable'"
+  - "su azureuser -c 'juju deploy kubeflow --trust --channel=1.8/stable'"
 
 write_files:
   - path: /etc/sysctl.conf
@@ -50,6 +43,7 @@ write_files:
     content: alias kubectl=microk8s.kubectl
 
   - path: /home/azureuser/kubeflow-ingress.yaml
+    owner: azureuser:azureuser
     content: |
       apiVersion: networking.k8s.io
       kind: Ingress
